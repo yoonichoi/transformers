@@ -34,13 +34,13 @@ class AttentionLayer(nn.Module):
 
         #compute dot-product attention. Don't forget the scaling value!
         #Expected shape of dot_product is (N, S, T)
-        dot_product = query @ key.transpose(1, 2) / math.sqrt(D)
+        dot_product = query @ key.transpose(1, 2) / np.sqrt(D)
 
         if attn_mask is not None:
             # convert att_mask which is multiplicative, to an additive mask
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
-            additive_mask = (1-attn_mask) * -1e9
+            additive_mask = (1-attn_mask) * -1e15
             dot_product += additive_mask
         
         # apply softmax, dropout, and use value
@@ -74,20 +74,20 @@ class MultiHeadAttentionLayer(AttentionLayer):
 
         #compute dot-product attention separately for each head. Don't forget the scaling value!
         #Expected shape of dot_product is (N, H, S, T)
-        dot_product = query @ key.transpose(2, 3) / math.sqrt(D)
+        dot_product = query @ key.transpose(2, 3) / np.sqrt(D/H)
 
         if attn_mask is not None:
             # convert att_mask which is multiplicative, to an additive mask
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
-            additive_mask = (1-attn_mask) * -1e9
+            additive_mask = (1-attn_mask) * -1e15
             dot_product += additive_mask.to(dot_product.device)
         
         # apply softmax, dropout, and use value
         y = self.dropout(F.softmax(dot_product, dim=-1)) @ value
 
         # concat embeddings from different heads, and project
-        output = self.head_proj(y.transpose(1, 2).contiguous().view(N, S, D))
+        output = self.head_proj(y.transpose(1, 2).contiguous().view(N, S, -1))
         return output
 
 
@@ -225,7 +225,7 @@ class TransformerDecoder(nn.Module):
         # This mask is multiplicative
         # setting mask[i,j] = 0 means jth element of the sequence is not used 
         # to predict the ith element of the sequence.
-        mask = torch.ones(_len, _len).triu(diagonal=1)  # torch.trill
+        mask = torch.tril(torch.ones(_len, _len)).to(self.device)
         return mask
                                       
     def forward(self, features, captions):
