@@ -81,7 +81,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
             additive_mask = (1-attn_mask) * -1e9
-            dot_product += additive_mask
+            dot_product += additive_mask.to(dot_product.device)
         
         # apply softmax, dropout, and use value
         y = self.dropout(F.softmax(dot_product, dim=-1)) @ value
